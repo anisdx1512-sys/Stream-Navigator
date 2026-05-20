@@ -18,6 +18,7 @@
     currentChannelIdx: -1,  // Index in filteredChannels for prev/next
     lastWatchedUrl: null,
     recentlyWatched: [],    // [{name, url, logo, group, watchedAt}]
+    favourites: new Set(),  // Set of channel URLs
     epgUrl: '',
     epgData: {},            // { channelId: [{title, start, end}] }
   };
@@ -27,7 +28,9 @@
   const LS_LAST = 'iptv_last_channel';
   const LS_PLAYLIST_IDX = 'iptv_playlist_idx';
   const LS_RECENT = 'iptv_recently_watched';
+  const LS_FAVS  = 'iptv_favourites';
   const MAX_RECENT = 10;
+  const FAV_CATEGORY = '⭐ Favourites';
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
@@ -88,6 +91,10 @@
       const rawR = localStorage.getItem(LS_RECENT);
       state.recentlyWatched = rawR ? JSON.parse(rawR) : [];
     } catch { state.recentlyWatched = []; }
+    try {
+      const rawF = localStorage.getItem(LS_FAVS);
+      state.favourites = new Set(rawF ? JSON.parse(rawF) : []);
+    } catch { state.favourites = new Set(); }
     state.epgUrl = localStorage.getItem(LS_EPG) || '';
     state.lastWatchedUrl = localStorage.getItem(LS_LAST) || null;
     state.currentPlaylistIdx = parseInt(localStorage.getItem(LS_PLAYLIST_IDX) || '0', 10) || 0;
@@ -98,6 +105,66 @@
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(state.playlists));
     } catch {}
+  }
+
+  // ── Favourites helpers ────────────────────────────────────────────────────
+
+  function isFav(url) { return state.favourites.has(url); }
+
+  function saveFavourites() {
+    try {
+      localStorage.setItem(LS_FAVS, JSON.stringify([...state.favourites]));
+    } catch {}
+  }
+
+  function toggleFavourite(url) {
+    if (state.favourites.has(url)) {
+      state.favourites.delete(url);
+      showToast('Removed from Favourites');
+    } else {
+      state.favourites.add(url);
+      showToast('Added to Favourites ⭐');
+    }
+    saveFavourites();
+    // Refresh star state on all visible cards without full re-render
+    document.querySelectorAll('.channel-card[data-url], .recent-card[data-url]').forEach(card => {
+      if (card.dataset.url === url) _updateStarBtn(card, isFav(url));
+    });
+    // If Favourites category is active, re-filter so removed items disappear
+    if (state.selectedCategory === FAV_CATEGORY) applyFilters();
+    // Re-render categories to update count
+    renderCategories();
+  }
+
+  function _updateStarBtn(card, faved) {
+    const btn = card.querySelector('.star-btn');
+    if (!btn) return;
+    btn.classList.toggle('starred', faved);
+    btn.title = faved ? 'Remove from Favourites' : 'Add to Favourites';
+    btn.innerHTML = faved ? _starIconFilled() : _starIconEmpty();
+  }
+
+  function _starIconEmpty() {
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>`;
+  }
+  function _starIconFilled() {
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="#f5c518" stroke="#f5c518" stroke-width="1.5">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>`;
+  }
+
+  function _makeStarBtn(url) {
+    const btn = document.createElement('button');
+    btn.className = 'star-btn' + (isFav(url) ? ' starred' : '');
+    btn.title = isFav(url) ? 'Remove from Favourites' : 'Add to Favourites';
+    btn.innerHTML = isFav(url) ? _starIconFilled() : _starIconEmpty();
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleFavourite(url);
+    });
+    return btn;
   }
 
   // ── Screen Management ─────────────────────────────────────────────────────
@@ -239,7 +306,12 @@
   // ── Filters ───────────────────────────────────────────────────────────────
 
   function applyFilters() {
-    let result = M3UParser.filterByCategory(state.channels, state.selectedCategory);
+    let result;
+    if (state.selectedCategory === FAV_CATEGORY) {
+      result = state.channels.filter(ch => isFav(ch.url));
+    } else {
+      result = M3UParser.filterByCategory(state.channels, state.selectedCategory);
+    }
     result = M3UParser.filterBySearch(result, state.searchQuery);
     state.filteredChannels = result;
     renderChannelGrid();
@@ -272,16 +344,31 @@
   function renderCategories() {
     const list = document.getElementById('category-list');
     list.innerHTML = '';
-    state.categories.forEach((cat, i) => {
-      const count = cat === 'All'
-        ? state.channels.length
-        : state.channels.filter(ch => ch.group === cat).length;
+
+    // Favourites entry always first (after All)
+    const allCats = [FAV_CATEGORY, ...state.categories];
+
+    allCats.forEach((cat) => {
+      let count;
+      if (cat === FAV_CATEGORY) {
+        count = state.channels.filter(ch => isFav(ch.url)).length;
+      } else if (cat === 'All') {
+        count = state.channels.length;
+      } else {
+        count = state.channels.filter(ch => ch.group === cat).length;
+      }
 
       const item = document.createElement('div');
       item.className = 'category-item focusable';
+      if (cat === FAV_CATEGORY) item.classList.add('fav-category');
       if (cat === state.selectedCategory) item.classList.add('active');
       item.tabIndex = 0;
-      item.innerHTML = `<span>${cat}</span><span class="category-count">${count}</span>`;
+
+      const label = cat === FAV_CATEGORY
+        ? `<span class="fav-cat-label">⭐ Favourites</span>`
+        : `<span>${cat}</span>`;
+
+      item.innerHTML = `${label}<span class="category-count">${count}</span>`;
       item.addEventListener('click', () => selectCategory(cat));
       item.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') selectCategory(cat);
@@ -320,7 +407,9 @@
       const card = document.createElement('div');
       card.className = 'channel-card focusable';
       card.tabIndex = 0;
+      card.dataset.url = ch.url;
       if (ch.url === lastUrl) card.classList.add('last-watched');
+      if (isFav(ch.url)) card.classList.add('favourited');
 
       const initials = ch.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 2).toUpperCase() || '?';
       const logoHtml = ch.logo
@@ -332,7 +421,15 @@
         <div class="channel-name">${escapeHtml(ch.name)}</div>
       `;
 
+      card.appendChild(_makeStarBtn(ch.url));
       card.addEventListener('click', () => playChannel(idx));
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'f' || e.key === 'F') {
+          e.stopPropagation();
+          toggleFavourite(ch.url);
+          card.classList.toggle('favourited', isFav(ch.url));
+        }
+      });
       grid.appendChild(card);
     });
 
@@ -415,6 +512,8 @@
       const card = document.createElement('div');
       card.className = 'recent-card focusable';
       card.tabIndex = 0;
+      card.dataset.url = item.url;
+      if (isFav(item.url)) card.classList.add('favourited');
 
       const initials = item.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 2).toUpperCase() || '?';
       const logoHtml = item.logo
@@ -427,6 +526,15 @@
         <div class="recent-time">${relativeTime(item.watchedAt)}</div>
         ${item.url === currentUrl ? '<div class="recent-playing-badge"></div>' : ''}
       `;
+
+      card.appendChild(_makeStarBtn(item.url));
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'f' || e.key === 'F') {
+          e.stopPropagation();
+          toggleFavourite(item.url);
+          card.classList.toggle('favourited', isFav(item.url));
+        }
+      });
 
       card.addEventListener('click', () => {
         // Find this channel in the full list and play it
