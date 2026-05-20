@@ -1,0 +1,15 @@
+{
+  "id": "com.iptv.player",
+  "version": "1.0.0",
+  "vendor": "IPTV App",
+  "type": "web",
+  "main": "index.html",
+  "title": "IPTV Player",
+  "icon": "icon.png",
+  "largeIcon": "icon.png",
+  "bgColor": "#1a1a2e",
+  "splashBackground": "#0f0f1a",
+  "transparent": false,
+  "privilegedJailBreak": false,
+  "resolution": "1920x1080"
+}

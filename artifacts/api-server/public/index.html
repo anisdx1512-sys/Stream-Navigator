@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, initial-scale=1">
+  <title>IPTV Player</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- ─────────────── SETUP SCREEN ─────────────── -->
+<div id="screen-setup" class="screen active">
+  <div class="setup-container">
+    <div class="setup-logo">
+      <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+        <rect width="80" height="80" rx="16" fill="#e94560"/>
+        <polygon points="30,20 60,40 30,60" fill="white"/>
+      </svg>
+      <h1>IPTV Player</h1>
+    </div>
+    <div class="setup-card">
+      <h2>Add Playlist</h2>
+      <div class="form-tabs">
+        <button class="tab-btn focusable active" data-tab="url" id="tab-url">M3U URL</button>
+        <button class="tab-btn focusable" data-tab="paste" id="tab-paste">Paste M3U</button>
+      </div>
+      <div id="tab-content-url" class="tab-content active">
+        <label>Playlist URL</label>
+        <input type="text" id="playlist-url-input" class="focusable text-input"
+               placeholder="http://example.com/playlist.m3u" autocomplete="off">
+        <label>Playlist Name (optional)</label>
+        <input type="text" id="playlist-name-input" class="focusable text-input"
+               placeholder="My Playlist" autocomplete="off">
+      </div>
+      <div id="tab-content-paste" class="tab-content">
+        <label>Paste M3U Content</label>
+        <textarea id="playlist-paste-input" class="focusable text-input"
+                  placeholder="#EXTM3U&#10;#EXTINF:-1 tvg-name=&quot;Channel 1&quot;,Channel 1&#10;http://example.com/stream1.m3u8"
+                  rows="6"></textarea>
+        <label>Playlist Name (optional)</label>
+        <input type="text" id="playlist-paste-name-input" class="focusable text-input"
+               placeholder="My Playlist" autocomplete="off">
+      </div>
+      <div class="form-actions">
+        <button id="btn-load-playlist" class="focusable btn-primary">Load Playlist</button>
+        <button id="btn-skip-setup" class="focusable btn-secondary">Skip (Browse Saved)</button>
+      </div>
+      <div id="setup-error" class="error-msg hidden"></div>
+      <div id="setup-loading" class="loading-msg hidden">
+        <div class="spinner"></div>
+        <span>Loading playlist...</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── MAIN SCREEN ─────────────── -->
+<div id="screen-main" class="screen">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <svg width="32" height="32" viewBox="0 0 80 80" fill="none">
+        <rect width="80" height="80" rx="12" fill="#e94560"/>
+        <polygon points="30,20 60,40 30,60" fill="white"/>
+      </svg>
+      <span>IPTV</span>
+    </div>
+    <div id="category-list" class="category-list"></div>
+    <div class="sidebar-footer">
+      <button id="btn-settings" class="focusable sidebar-btn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Settings
+      </button>
+    </div>
+  </div>
+
+  <!-- Main content area -->
+  <div id="main-content">
+    <div id="search-bar">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="search-input" class="focusable search-input"
+             placeholder="Search channels..." autocomplete="off">
+      <span id="channel-count" class="channel-count"></span>
+    </div>
+    <div id="channel-grid" class="channel-grid"></div>
+    <div id="no-results" class="no-results hidden">
+      <p>No channels found</p>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── PLAYER SCREEN ─────────────── -->
+<div id="screen-player" class="screen">
+  <video id="video-player" autoplay playsinline></video>
+  <div id="buffering-spinner" class="buffering hidden">
+    <div class="spinner large"></div>
+  </div>
+  <div id="player-overlay" class="player-overlay hidden">
+    <div class="overlay-top">
+      <button id="btn-back-from-player" class="focusable overlay-back-btn">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+        Back
+      </button>
+      <div id="overlay-channel-info">
+        <img id="overlay-logo" src="" alt="" onerror="this.style.display='none'">
+        <div>
+          <div id="overlay-channel-name" class="overlay-channel-name"></div>
+          <div id="overlay-time" class="overlay-time"></div>
+        </div>
+      </div>
+    </div>
+    <div class="overlay-bottom">
+      <div id="overlay-epg" class="overlay-epg hidden">
+        <div id="epg-program-name"></div>
+        <div id="epg-progress-bar"><div id="epg-progress-fill"></div></div>
+        <div id="epg-time-range"></div>
+      </div>
+      <div class="overlay-controls">
+        <button id="btn-prev-channel" class="focusable overlay-ctrl-btn" title="Previous Channel">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <button id="btn-toggle-mute" class="focusable overlay-ctrl-btn" title="Mute">
+          <svg id="icon-volume" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+        </button>
+        <button id="btn-next-channel" class="focusable overlay-ctrl-btn" title="Next Channel">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div id="player-error" class="player-error hidden">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#e94560" stroke-width="1.5">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <p id="player-error-msg">Cannot play this channel</p>
+    <div class="player-error-actions">
+      <button id="btn-retry-stream" class="focusable btn-primary">Retry</button>
+      <button id="btn-back-from-error" class="focusable btn-secondary">Back to Channels</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── SETTINGS SCREEN ─────────────── -->
+<div id="screen-settings" class="screen">
+  <div class="settings-container">
+    <div class="settings-header">
+      <button id="btn-back-from-settings" class="focusable overlay-back-btn">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+        Back
+      </button>
+      <h2>Settings</h2>
+    </div>
+    <div class="settings-body">
+      <section class="settings-section">
+        <h3>Playlists</h3>
+        <div id="playlists-list"></div>
+        <button id="btn-add-playlist" class="focusable btn-primary settings-add-btn">
+          + Add New Playlist
+        </button>
+      </section>
+      <section class="settings-section">
+        <h3>EPG Source</h3>
+        <input type="text" id="epg-url-input" class="focusable text-input"
+               placeholder="http://example.com/epg.xml" autocomplete="off">
+        <button id="btn-save-epg" class="focusable btn-primary">Save EPG URL</button>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
+<script src="/m3u-parser.js"></script>
+<script src="/navigation.js"></script>
+<script src="/player.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

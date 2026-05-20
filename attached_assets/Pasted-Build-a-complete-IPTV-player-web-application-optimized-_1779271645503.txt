@@ -1,0 +1,92 @@
+Build a complete IPTV player web application optimized for LG WebOS TV.
+
+## Project Overview
+A full-stack IPTV player that runs in the browser on LG WebOS Smart TVs, supporting M3U playlists and EPG (Electronic Program Guide).
+
+---
+
+## Tech Stack
+- **Frontend:** Vanilla HTML5 + CSS3 + JavaScript (NO React/Vue — WebOS has limited JS engine support)
+- **Video Player:** HLS.js for HLS streams, and native HTML5 <video> for direct streams
+- **Backend:** Node.js + Express (to proxy M3U playlists and avoid CORS issues)
+- **Storage:** LocalStorage for saving playlists and user preferences
+
+---
+
+## Core Features
+
+### 1. Playlist Management
+- Allow user to input M3U URL or paste M3U content directly
+- Parse M3U file and extract: channel name, logo URL, group/category, stream URL
+- Support multiple playlists (save up to 5 playlists)
+- Auto-reload playlist on startup
+
+### 2. Channel Browser UI
+- Display channels in a grid layout with logo + channel name
+- Group channels by category (sidebar filter)
+- Search bar to filter channels by name
+- Remember last watched channel
+
+### 3. Video Player
+- Full-screen video player using HTML5 <video> element
+- Support stream types: HLS (.m3u8), MPEG-TS, MP4
+- Use HLS.js for HLS streams with auto quality selection
+- Show buffering spinner
+- Display channel name and current time as overlay
+
+### 4. EPG Support (optional if time allows)
+- Accept XMLTV EPG URL
+- Show current program name and progress bar under each channel
+- Show mini program guide for selected channel
+
+### 5. Remote Control Navigation (CRITICAL for WebOS)
+- Full D-pad keyboard navigation (Arrow keys: Up/Down/Left/Right)
+- Enter key to select/confirm
+- Backspace or Escape to go back
+- Support WebOS Magic Remote (mouse + pointer)
+- All focusable elements must have visible focus highlight (bright border)
+- No hover-only interactions — everything must work with arrow keys
+
+---
+
+## WebOS-Specific Requirements
+- Target WebOS 3.x and above
+- Add this meta tag: <meta name="viewport" content="width=1920, initial-scale=1">
+- Resolution: designed for 1920x1080 (Full HD)
+- Do NOT use CSS animations that are GPU-heavy
+- Avoid web fonts that require internet (use system fonts or embed one font max)
+- Add a `appinfo.json` file for WebOS app packaging:
+  {
+    "id": "com.iptv.player",
+    "version": "1.0.0",
+    "vendor": "IPTV App",
+    "type": "web",
+    "main": "index.html",
+    "title": "IPTV Player",
+    "icon": "icon.png",
+    "largeIcon": "icon.png",
+    "bgColor": "#1a1a2e"
+  }
+
+---
+
+## UI Design
+- Dark theme: background #1a1a2e, accent color #e94560, text white
+- Large fonts (min 24px) — TV viewing distance
+- Channel card: 200x130px with logo centered, name below
+- Sidebar: 300px wide, full height, category list
+- Player overlay: semi-transparent bottom bar with channel info
+- Settings screen: simple form to add/manage playlists
+
+---
+
+## Backend (Node.js Express)
+Create a simple proxy server:
+- GET /proxy/m3u?url=ENCODED_URL → fetch and return M3U content (bypass CORS)
+- GET /proxy/epg?url=ENCODED_URL → fetch and return EPG XML
+- Serve the frontend static files
+- Port: 3000
+
+---
+
+## File Structure
