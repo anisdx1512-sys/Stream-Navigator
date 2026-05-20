@@ -86,6 +86,16 @@
              placeholder="Search channels..." autocomplete="off">
       <span id="channel-count" class="channel-count"></span>
     </div>
+    <div id="recently-watched-section" class="hidden">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Recently Watched
+        <button id="btn-clear-recent" class="focusable clear-recent-btn">Clear</button>
+      </div>
+      <div id="recently-watched-rail" class="recently-watched-rail"></div>
+    </div>
     <div id="channel-grid" class="channel-grid"></div>
     <div id="no-results" class="no-results hidden">
       <p>No channels found</p>

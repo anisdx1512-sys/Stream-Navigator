@@ -710,6 +710,123 @@ textarea.text-input { resize: none; }
 }
 
 /* ────────────────────────────────────────────
+   RECENTLY WATCHED RAIL
+──────────────────────────────────────────── */
+#recently-watched-section {
+  flex-shrink: 0;
+  padding: 24px 40px 0;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 18px;
+}
+.section-header svg { color: var(--accent); flex-shrink: 0; }
+
+.clear-recent-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-3);
+  font-size: 17px;
+  font-family: var(--font);
+  padding: 6px 18px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.clear-recent-btn.focused, .clear-recent-btn:focus {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.recently-watched-rail {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.recently-watched-rail::-webkit-scrollbar { display: none; }
+
+.recent-card {
+  flex-shrink: 0;
+  width: 180px;
+  height: 112px;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 10px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.recent-card.focused, .recent-card:focus {
+  border-color: var(--accent);
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 3px rgba(233,69,96,0.28);
+  transform: scale(1.06);
+  z-index: 5;
+  outline: none;
+}
+
+.recent-logo-wrap {
+  width: 56px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.recent-logo {
+  max-width: 56px; max-height: 38px;
+  object-fit: contain;
+}
+.recent-logo-placeholder {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; color: var(--accent);
+}
+.recent-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-1);
+  text-align: center;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+.recent-time {
+  font-size: 13px;
+  color: var(--text-3);
+}
+.recent-playing-badge {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ────────────────────────────────────────────
    CHANNEL NUMBER OSD
 ──────────────────────────────────────────── */
 .channel-osd {

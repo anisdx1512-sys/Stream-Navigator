@@ -17,6 +17,7 @@
     searchQuery: '',
     currentChannelIdx: -1,  // Index in filteredChannels for prev/next
     lastWatchedUrl: null,
+    recentlyWatched: [],    // [{name, url, logo, group, watchedAt}]
     epgUrl: '',
     epgData: {},            // { channelId: [{title, start, end}] }
   };
@@ -25,6 +26,8 @@
   const LS_EPG = 'iptv_epg_url';
   const LS_LAST = 'iptv_last_channel';
   const LS_PLAYLIST_IDX = 'iptv_playlist_idx';
+  const LS_RECENT = 'iptv_recently_watched';
+  const MAX_RECENT = 10;
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
@@ -81,6 +84,10 @@
       const raw = localStorage.getItem(LS_KEY);
       state.playlists = raw ? JSON.parse(raw) : [];
     } catch { state.playlists = []; }
+    try {
+      const rawR = localStorage.getItem(LS_RECENT);
+      state.recentlyWatched = rawR ? JSON.parse(rawR) : [];
+    } catch { state.recentlyWatched = []; }
     state.epgUrl = localStorage.getItem(LS_EPG) || '';
     state.lastWatchedUrl = localStorage.getItem(LS_LAST) || null;
     state.currentPlaylistIdx = parseInt(localStorage.getItem(LS_PLAYLIST_IDX) || '0', 10) || 0;
@@ -100,10 +107,10 @@
     const screen = document.getElementById('screen-' + name);
     if (screen) {
       screen.classList.add('active');
-      // Focus first focusable element
       setTimeout(() => Nav.focusFirst(screen), 50);
     }
     if (name !== 'player') Player.stop();
+    if (name === 'main') renderRecentlyWatched();
   }
 
   // ── Setup Screen ──────────────────────────────────────────────────────────
@@ -242,6 +249,10 @@
 
   function bindMainScreen() {
     document.getElementById('btn-settings').addEventListener('click', () => showScreen('settings'));
+    document.getElementById('btn-clear-recent').addEventListener('click', () => {
+      clearRecentlyWatched();
+      showToast('Recently watched cleared');
+    });
 
     const searchInput = document.getElementById('search-input');
     searchInput.addEventListener('input', () => {
@@ -341,12 +352,100 @@
     state.lastWatchedUrl = ch.url;
     localStorage.setItem(LS_LAST, ch.url);
 
+    addToRecentlyWatched(ch);
     showScreen('player');
     Player.load(ch.url, ch);
 
     // Set EPG if available
     const epgNow = getEPGNow(ch.name);
     if (epgNow) Player.setEPG(epgNow.title, epgNow.start, epgNow.end);
+  }
+
+  // ── Recently Watched ──────────────────────────────────────────────────────
+
+  function addToRecentlyWatched(ch) {
+    // Remove existing entry for same URL so it floats to top
+    state.recentlyWatched = state.recentlyWatched.filter(r => r.url !== ch.url);
+    state.recentlyWatched.unshift({
+      name: ch.name,
+      url: ch.url,
+      logo: ch.logo || '',
+      group: ch.group || '',
+      watchedAt: Date.now(),
+    });
+    // Cap at MAX_RECENT
+    if (state.recentlyWatched.length > MAX_RECENT) {
+      state.recentlyWatched = state.recentlyWatched.slice(0, MAX_RECENT);
+    }
+    try {
+      localStorage.setItem(LS_RECENT, JSON.stringify(state.recentlyWatched));
+    } catch {}
+  }
+
+  function clearRecentlyWatched() {
+    state.recentlyWatched = [];
+    localStorage.removeItem(LS_RECENT);
+    renderRecentlyWatched();
+  }
+
+  function relativeTime(ts) {
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1)  return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)  return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  }
+
+  function renderRecentlyWatched() {
+    const section = document.getElementById('recently-watched-section');
+    const rail    = document.getElementById('recently-watched-rail');
+    if (!state.recentlyWatched.length) {
+      section.classList.add('hidden');
+      return;
+    }
+    section.classList.remove('hidden');
+    rail.innerHTML = '';
+
+    const currentUrl = state.lastWatchedUrl;
+
+    state.recentlyWatched.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'recent-card focusable';
+      card.tabIndex = 0;
+
+      const initials = item.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 2).toUpperCase() || '?';
+      const logoHtml = item.logo
+        ? `<img class="recent-logo" src="${escapeHtml(item.logo)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'recent-logo-placeholder\\'>${initials}</div>'">`
+        : `<div class="recent-logo-placeholder">${initials}</div>`;
+
+      card.innerHTML = `
+        <div class="recent-logo-wrap">${logoHtml}</div>
+        <div class="recent-name">${escapeHtml(item.name)}</div>
+        <div class="recent-time">${relativeTime(item.watchedAt)}</div>
+        ${item.url === currentUrl ? '<div class="recent-playing-badge"></div>' : ''}
+      `;
+
+      card.addEventListener('click', () => {
+        // Find this channel in the full list and play it
+        const ch = state.channels.find(c => c.url === item.url);
+        if (!ch) { showToast('Channel not found in current playlist'); return; }
+        // Make sure it's in filteredChannels
+        let filteredIdx = state.filteredChannels.findIndex(c => c.url === item.url);
+        if (filteredIdx < 0) {
+          state.selectedCategory = 'All';
+          state.searchQuery = '';
+          document.getElementById('search-input').value = '';
+          applyFilters();
+          filteredIdx = state.filteredChannels.findIndex(c => c.url === item.url);
+        }
+        if (filteredIdx >= 0) playChannel(filteredIdx);
+      });
+
+      rail.appendChild(card);
+    });
   }
 
   function playPrevChannel() {
