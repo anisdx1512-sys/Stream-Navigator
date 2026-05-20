@@ -35,6 +35,27 @@
       onBack: () => showScreen('main'),
     });
     Nav.setKeyInterceptor(Player.keyInterceptor);
+    Nav.addKeyInterceptor(ChannelOSD.handleKey);
+
+    ChannelOSD.setOnTune((idx) => {
+      // Always tune against the full channel list (not filtered)
+      if (idx >= 0 && idx < state.channels.length) {
+        // Find the matching channel in filteredChannels, or play directly
+        const ch = state.channels[idx];
+        const filteredIdx = state.filteredChannels.findIndex(c => c.url === ch.url);
+        if (filteredIdx >= 0) {
+          playChannel(filteredIdx);
+        } else {
+          // Channel is filtered out — reset filters and play
+          state.selectedCategory = 'All';
+          state.searchQuery = '';
+          document.getElementById('search-input').value = '';
+          applyFilters();
+          const newIdx = state.filteredChannels.findIndex(c => c.url === ch.url);
+          if (newIdx >= 0) playChannel(newIdx);
+        }
+      }
+    });
 
     bindSetupScreen();
     bindMainScreen();
@@ -202,6 +223,7 @@
     state.searchQuery = '';
     state.currentPlaylistIdx = idx;
     localStorage.setItem(LS_PLAYLIST_IDX, String(idx));
+    ChannelOSD.setChannels(state.channels);
     applyFilters();
     renderCategories();
     if (state.epgUrl) fetchEPG(state.epgUrl);

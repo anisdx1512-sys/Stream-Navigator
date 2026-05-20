@@ -183,15 +183,15 @@ window.Nav = (function () {
     Right: 'right',
   };
 
-  // Public hook for other modules to intercept keys before Nav handles them
-  let keyInterceptor = null;
-  function setKeyInterceptor(fn) { keyInterceptor = fn; }
+  // Chain of key interceptors — checked in order, first truthy return wins
+  const interceptors = [];
+  function addKeyInterceptor(fn) { interceptors.push(fn); }
+  // Legacy single-interceptor setter kept for compatibility
+  function setKeyInterceptor(fn) { interceptors[0] = fn; }
 
   document.addEventListener('keydown', function (e) {
-    // Let interceptor handle it first (e.g., player screen)
-    if (keyInterceptor) {
-      const handled = keyInterceptor(e);
-      if (handled) return;
+    for (const fn of interceptors) {
+      if (fn && fn(e)) return;
     }
 
     const dir = KEY_MAP[e.key];
@@ -223,5 +223,5 @@ window.Nav = (function () {
     if (el) focus(el, { scroll: false });
   });
 
-  return { focus, navigate, activate, focusFirst, setEnabled, setKeyInterceptor, getFocusables };
+  return { focus, navigate, activate, focusFirst, setEnabled, setKeyInterceptor, addKeyInterceptor, getFocusables };
 })();

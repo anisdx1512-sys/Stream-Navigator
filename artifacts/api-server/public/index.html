@@ -185,6 +185,19 @@
   </div>
 </div>
 
+<!-- Channel Number OSD -->
+<div id="channel-osd" class="channel-osd hidden">
+  <div class="osd-number" id="osd-number">--</div>
+  <div class="osd-info">
+    <img id="osd-logo" src="" alt="" onerror="this.style.display='none'">
+    <div class="osd-text">
+      <div id="osd-channel-name" class="osd-channel-name">---</div>
+      <div id="osd-category" class="osd-category"></div>
+    </div>
+  </div>
+  <div class="osd-hint">Press <kbd>Enter</kbd> to tune</div>
+</div>
+
 <!-- Toast notification -->
 <div id="toast" class="toast hidden"></div>
 
@@ -193,6 +206,7 @@
 <script src="/m3u-parser.js"></script>
 <script src="/navigation.js"></script>
 <script src="/player.js"></script>
+<script src="/channel-osd.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
