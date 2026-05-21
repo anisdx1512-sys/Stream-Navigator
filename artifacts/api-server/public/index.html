@@ -152,6 +152,29 @@
       </div>
     </div>
   </div>
+  <!-- Sleep timer indicator — always visible over video when active -->
+  <div id="sleep-timer-indicator" class="sleep-indicator hidden"></div>
+
+  <!-- Sleep timer menu -->
+  <div id="sleep-timer-menu" class="sleep-menu hidden">
+    <div class="sleep-menu-inner">
+      <div class="sleep-menu-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 17H7V7"/><path d="M7 12l3-3 2 2 4-4"/>
+        </svg>
+        Sleep Timer
+      </div>
+      <div class="sleep-menu-options">
+        <button class="focusable sleep-opt-btn" data-mins="0">Off</button>
+        <button class="focusable sleep-opt-btn" data-mins="15">15 min</button>
+        <button class="focusable sleep-opt-btn" data-mins="30">30 min</button>
+        <button class="focusable sleep-opt-btn" data-mins="60">1 hour</button>
+        <button class="focusable sleep-opt-btn" data-mins="90">1.5 hours</button>
+      </div>
+      <div class="sleep-menu-hint">Press <kbd>S</kbd> or <kbd>Esc</kbd> to close</div>
+    </div>
+  </div>
+
   <div id="player-error" class="player-error hidden">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#e94560" stroke-width="1.5">
       <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
@@ -217,6 +240,7 @@
 <script src="/navigation.js"></script>
 <script src="/player.js"></script>
 <script src="/channel-osd.js"></script>
+<script src="/sleep-timer.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

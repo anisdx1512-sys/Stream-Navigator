@@ -42,6 +42,17 @@
     });
     Nav.setKeyInterceptor(Player.keyInterceptor);
     Nav.addKeyInterceptor(ChannelOSD.handleKey);
+    SleepTimer.init();
+
+    document.addEventListener('sleeptimer:set', (e) => {
+      const m = e.detail.minutes;
+      showToast(`Sleep timer set — stops in ${m >= 60 ? (m / 60) + ' hr' : m + ' min'}`);
+    });
+    document.addEventListener('sleeptimer:expired', () => {
+      Player.stop();
+      showScreen('main');
+      showToast('Sleep timer: playback stopped');
+    });
 
     ChannelOSD.setOnTune((idx) => {
       // Always tune against the full channel list (not filtered)
