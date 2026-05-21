@@ -43,15 +43,25 @@
     Nav.setKeyInterceptor(Player.keyInterceptor);
     Nav.addKeyInterceptor(ChannelOSD.handleKey);
     SleepTimer.init();
+    PiP.init();
 
     document.addEventListener('sleeptimer:set', (e) => {
       const m = e.detail.minutes;
       showToast(`Sleep timer set — stops in ${m >= 60 ? (m / 60) + ' hr' : m + ' min'}`);
     });
     document.addEventListener('sleeptimer:expired', () => {
+      if (PiP.isActive()) PiP.exit(false);
       Player.stop();
       showScreen('main');
       showToast('Sleep timer: playback stopped');
+    });
+
+    document.addEventListener('pip:enter', () => {
+      showScreen('main');
+      showToast('Picture-in-Picture — press P to return');
+    });
+    document.addEventListener('pip:exit', () => {
+      showScreen('player');
     });
 
     ChannelOSD.setOnTune((idx) => {
@@ -181,13 +191,17 @@
   // ── Screen Management ─────────────────────────────────────────────────────
 
   function showScreen(name) {
+    // Leaving the main-screen context while PiP is live — kill PiP cleanly
+    if (PiP.isActive() && name !== 'main') PiP.exit(false);
+
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const screen = document.getElementById('screen-' + name);
     if (screen) {
       screen.classList.add('active');
       setTimeout(() => Nav.focusFirst(screen), 50);
     }
-    if (name !== 'player') Player.stop();
+    // Don't stop the player while PiP is keeping it alive in the corner
+    if (name !== 'player' && !PiP.isActive()) Player.stop();
     if (name === 'main') renderRecentlyWatched();
   }
 
@@ -459,6 +473,9 @@
     state.currentChannelIdx = filteredIdx;
     state.lastWatchedUrl = ch.url;
     localStorage.setItem(LS_LAST, ch.url);
+
+    // Exit PiP (caller handles navigation, so don't fire pip:exit)
+    if (PiP.isActive()) PiP.exit(false);
 
     addToRecentlyWatched(ch);
     showScreen('player');

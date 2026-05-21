@@ -152,6 +152,17 @@
       </div>
     </div>
   </div>
+  <!-- PiP caption bar — visible only when pip-active class is on this screen -->
+  <div id="pip-caption" class="pip-caption">
+    <span id="pip-channel-name" class="pip-channel-name"></span>
+    <button id="btn-pip-expand" class="pip-expand-btn" title="Expand to full screen">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+        <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+      </svg>
+    </button>
+  </div>
+
   <!-- Sleep timer indicator — always visible over video when active -->
   <div id="sleep-timer-indicator" class="sleep-indicator hidden"></div>
 
@@ -241,6 +252,7 @@
 <script src="/player.js"></script>
 <script src="/channel-osd.js"></script>
 <script src="/sleep-timer.js"></script>
+<script src="/pip.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
