@@ -44,6 +44,7 @@
     Nav.addKeyInterceptor(ChannelOSD.handleKey);
     SleepTimer.init();
     PiP.init();
+    PinLock.init();
 
     document.addEventListener('sleeptimer:set', (e) => {
       const m = e.detail.minutes;
@@ -186,6 +187,53 @@
       toggleFavourite(url);
     });
     return btn;
+  }
+
+  // ── Lock helpers ──────────────────────────────────────────────────────────
+
+  function _lockIconEmpty() {
+    return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="11" width="18" height="11" rx="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>`;
+  }
+  function _lockIconFilled() {
+    return `<svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      <rect x="3" y="11" width="18" height="11" rx="2" fill="currentColor"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="currentColor" stroke-width="2.5"/>
+    </svg>`;
+  }
+
+  function _makeLockBtn(url) {
+    const btn = document.createElement('button');
+    const locked = PinLock.isLocked(url);
+    btn.className = 'lock-btn' + (locked ? ' locked' : '');
+    btn.title = locked ? 'Unlock channel (PIN required)' : 'Lock channel';
+    btn.innerHTML = locked ? _lockIconFilled() : _lockIconEmpty();
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!PinLock.hasPin()) {
+        showToast('Set a PIN first in Settings → Parental Controls');
+        return;
+      }
+      PinLock.toggleLock(url, (isNowLocked) => {
+        _syncLockBtns(url, isNowLocked);
+        showToast(isNowLocked ? '🔒 Channel locked' : '🔓 Channel unlocked');
+      }, null);
+    });
+    return btn;
+  }
+
+  function _syncLockBtns(url, isLocked) {
+    document.querySelectorAll(`[data-url]`).forEach(card => {
+      if (card.dataset.url !== url) return;
+      card.classList.toggle('locked', isLocked);
+      const btn = card.querySelector('.lock-btn');
+      if (!btn) return;
+      btn.classList.toggle('locked', isLocked);
+      btn.title = isLocked ? 'Unlock channel (PIN required)' : 'Lock channel';
+      btn.innerHTML = isLocked ? _lockIconFilled() : _lockIconEmpty();
+    });
   }
 
   // ── Screen Management ─────────────────────────────────────────────────────
@@ -435,6 +483,7 @@
       card.dataset.url = ch.url;
       if (ch.url === lastUrl) card.classList.add('last-watched');
       if (isFav(ch.url)) card.classList.add('favourited');
+      if (PinLock.isLocked(ch.url)) card.classList.add('locked');
 
       const initials = ch.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 2).toUpperCase() || '?';
       const logoHtml = ch.logo
@@ -447,12 +496,21 @@
       `;
 
       card.appendChild(_makeStarBtn(ch.url));
+      card.appendChild(_makeLockBtn(ch.url));
       card.addEventListener('click', () => playChannel(idx));
       card.addEventListener('keydown', (e) => {
         if (e.key === 'f' || e.key === 'F') {
           e.stopPropagation();
           toggleFavourite(ch.url);
           card.classList.toggle('favourited', isFav(ch.url));
+        }
+        if (e.key === 'l' || e.key === 'L') {
+          e.stopPropagation();
+          if (!PinLock.hasPin()) { showToast('Set a PIN first in Settings → Parental Controls'); return; }
+          PinLock.toggleLock(ch.url, (isNowLocked) => {
+            _syncLockBtns(ch.url, isNowLocked);
+            showToast(isNowLocked ? '🔒 Channel locked' : '🔓 Channel unlocked');
+          }, null);
         }
       });
       grid.appendChild(card);
@@ -470,18 +528,31 @@
   function playChannel(filteredIdx) {
     const ch = state.filteredChannels[filteredIdx];
     if (!ch) return;
+
+    if (PinLock.isLocked(ch.url)) {
+      if (!PinLock.hasPin()) {
+        showToast('Set a PIN first in Settings → Parental Controls');
+        return;
+      }
+      PinLock.promptVerify(() => _execPlay(filteredIdx), null);
+      return;
+    }
+    _execPlay(filteredIdx);
+  }
+
+  function _execPlay(filteredIdx) {
+    const ch = state.filteredChannels[filteredIdx];
+    if (!ch) return;
     state.currentChannelIdx = filteredIdx;
     state.lastWatchedUrl = ch.url;
     localStorage.setItem(LS_LAST, ch.url);
 
-    // Exit PiP (caller handles navigation, so don't fire pip:exit)
     if (PiP.isActive()) PiP.exit(false);
 
     addToRecentlyWatched(ch);
     showScreen('player');
     Player.load(ch.url, ch);
 
-    // Set EPG if available
     const epgNow = getEPGNow(ch.name);
     if (epgNow) Player.setEPG(epgNow.title, epgNow.start, epgNow.end);
   }
@@ -542,6 +613,7 @@
       card.tabIndex = 0;
       card.dataset.url = item.url;
       if (isFav(item.url)) card.classList.add('favourited');
+      if (PinLock.isLocked(item.url)) card.classList.add('locked');
 
       const initials = item.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 2).toUpperCase() || '?';
       const logoHtml = item.logo
@@ -556,11 +628,20 @@
       `;
 
       card.appendChild(_makeStarBtn(item.url));
+      card.appendChild(_makeLockBtn(item.url));
       card.addEventListener('keydown', (e) => {
         if (e.key === 'f' || e.key === 'F') {
           e.stopPropagation();
           toggleFavourite(item.url);
           card.classList.toggle('favourited', isFav(item.url));
+        }
+        if (e.key === 'l' || e.key === 'L') {
+          e.stopPropagation();
+          if (!PinLock.hasPin()) { showToast('Set a PIN first in Settings → Parental Controls'); return; }
+          PinLock.toggleLock(item.url, (isNowLocked) => {
+            _syncLockBtns(item.url, isNowLocked);
+            showToast(isNowLocked ? '🔒 Channel locked' : '🔓 Channel unlocked');
+          }, null);
         }
       });
 
@@ -620,6 +701,46 @@
       if (url) fetchEPG(url);
       showToast('EPG URL saved');
     });
+
+    // Parental controls
+    document.getElementById('btn-set-pin').addEventListener('click', () => {
+      PinLock.promptSetPin(() => {
+        renderParentalStatus();
+        showToast('PIN set — channels can now be locked with L');
+      }, null);
+    });
+    document.getElementById('btn-change-pin').addEventListener('click', () => {
+      PinLock.promptVerify(() => {
+        PinLock.promptSetPin(() => {
+          renderParentalStatus();
+          showToast('PIN changed successfully');
+        }, null);
+      }, null);
+    });
+    document.getElementById('btn-remove-pin').addEventListener('click', () => {
+      PinLock.promptVerify(() => {
+        PinLock.removePin();
+        renderParentalStatus();
+        applyFilters();
+        renderRecentlyWatched();
+        showToast('PIN removed — all channels unlocked');
+      }, null);
+    });
+  }
+
+  function renderParentalStatus() {
+    const el = document.getElementById('parental-status');
+    if (!el) return;
+    const count = PinLock.lockedCount();
+    if (PinLock.hasPin()) {
+      el.innerHTML = `<span class="pin-set-badge">✓ PIN set</span> — ${count} channel${count !== 1 ? 's' : ''} locked`;
+    } else {
+      el.innerHTML = `<span class="pin-unset-badge">No PIN set</span> — set a PIN to lock channels`;
+    }
+    const hasPIN = PinLock.hasPin();
+    document.getElementById('btn-set-pin').classList.toggle('hidden', hasPIN);
+    document.getElementById('btn-change-pin').classList.toggle('hidden', !hasPIN);
+    document.getElementById('btn-remove-pin').classList.toggle('hidden', !hasPIN);
   }
 
   function renderSettingsPlaylists() {
@@ -676,7 +797,7 @@
   const origShowScreenFn = showScreen;
   function showScreenPatched(name) {
     origShowScreenFn(name);
-    if (name === 'settings') renderSettingsPlaylists();
+    if (name === 'settings') { renderSettingsPlaylists(); renderParentalStatus(); }
   }
   // Replace references
   // (We use the patched version via the back-event and explicit calls)

@@ -220,12 +220,51 @@
         </button>
       </section>
       <section class="settings-section">
+        <h3>Parental Controls</h3>
+        <div id="parental-status" class="parental-status"></div>
+        <div class="parental-actions">
+          <button id="btn-set-pin" class="focusable btn-primary">Set PIN</button>
+          <button id="btn-change-pin" class="focusable btn-secondary">Change PIN</button>
+          <button id="btn-remove-pin" class="focusable btn-danger btn-sm">Remove PIN &amp; Unlock All</button>
+        </div>
+      </section>
+      <section class="settings-section">
         <h3>EPG Source</h3>
         <input type="text" id="epg-url-input" class="focusable text-input"
                placeholder="http://example.com/epg.xml" autocomplete="off">
         <button id="btn-save-epg" class="focusable btn-primary">Save EPG URL</button>
       </section>
     </div>
+  </div>
+</div>
+
+<!-- ─────────────── PIN LOCK OVERLAY ─────────────── -->
+<div id="pin-overlay" class="pin-overlay hidden">
+  <div class="pin-box">
+    <div class="pin-title" id="pin-title">🔒 Locked Channel</div>
+    <div class="pin-subtitle" id="pin-subtitle">Enter PIN to watch</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pin-dot-0"></div>
+      <div class="pin-dot" id="pin-dot-1"></div>
+      <div class="pin-dot" id="pin-dot-2"></div>
+      <div class="pin-dot" id="pin-dot-3"></div>
+    </div>
+    <div id="pin-error" class="pin-error hidden">Incorrect PIN</div>
+    <div class="pin-numpad">
+      <button class="focusable pin-key" data-digit="1">1</button>
+      <button class="focusable pin-key" data-digit="2">2</button>
+      <button class="focusable pin-key" data-digit="3">3</button>
+      <button class="focusable pin-key" data-digit="4">4</button>
+      <button class="focusable pin-key" data-digit="5">5</button>
+      <button class="focusable pin-key" data-digit="6">6</button>
+      <button class="focusable pin-key" data-digit="7">7</button>
+      <button class="focusable pin-key" data-digit="8">8</button>
+      <button class="focusable pin-key" data-digit="9">9</button>
+      <button class="focusable pin-key pin-key-action" id="pin-del">⌫</button>
+      <button class="focusable pin-key" data-digit="0">0</button>
+      <button class="focusable pin-key pin-key-ok" id="pin-ok">OK</button>
+    </div>
+    <button id="pin-cancel" class="focusable pin-cancel-btn">Cancel</button>
   </div>
 </div>
 
@@ -253,6 +292,7 @@
 <script src="/channel-osd.js"></script>
 <script src="/sleep-timer.js"></script>
 <script src="/pip.js"></script>
+<script src="/pin-lock.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
